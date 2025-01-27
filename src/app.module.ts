@@ -1,26 +1,27 @@
 import { Module } from '@nestjs/common';
-import { AuthModule } from './auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { PermissionModule } from './permission/permission.module';
+import { AuthModule } from './auth/auth.module';
+import { AccessRightsModule } from './access-rights/access-rights.module';
 import { SeedModule } from './seed/seed.module';
 
 @Module({
   imports: [
-    AuthModule,
-    ConfigModule.forRoot({isGlobal:true}),
+    ConfigModule.forRoot({
+      isGlobal: true,  // Permite acceso a las variables de entorno en toda la app
+    }),
+
     TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: process.env.DB_HOST,
-      port: +process.env.DB_PORT,
+      type: 'mongodb',
+      url: `mongodb://127.0.0.1:27017/?directConnection=true&serverSelectionTimeoutMS=2000&appName=mongosh+2.2.5`,
       database: process.env.DB_NAME,
-      username: process.env.DB_USERNAME,
-      password: process.env.DB_PASSWORD,      
-      autoLoadEntities: true,
+      entities: [__dirname + '/**/*.entity{.ts,.js}'],
       synchronize: true,
     }),
-    PermissionModule,
+
+    AuthModule,
     SeedModule,
-  ],
+    AccessRightsModule,
+  ]
 })
 export class AppModule {}

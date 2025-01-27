@@ -2,16 +2,17 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { CreateSeedDto } from './dto/create-seed.dto';
 import { UpdateSeedDto } from './dto/update-seed.dto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { system_module } from '../permission/entities/systemModule.entity';
+
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { initialData } from './data/seed-data';
+import { SystemModule } from 'src/access-rights/entities/system-module.entity';
 
 @Injectable()
 export class SeedService {
   constructor(
-    @InjectRepository(system_module)
-    private readonly systemModuleRepository: Repository<system_module>,
+    @InjectRepository(SystemModule)
+    private readonly systemModuleRepository: Repository<SystemModule>,
     private readonly configService: ConfigService
     
   ){}
@@ -36,7 +37,6 @@ export class SeedService {
     } else {
       throw new BadRequestException("The password is wrong")
     }
-    
     
   }
   

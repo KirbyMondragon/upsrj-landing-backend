@@ -1,93 +1,75 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Permission } from 'src/permission/entities/permission.entity';
-import { BeforeInsert, BeforeUpdate, Column, Entity, OneToMany, PrimaryGeneratedColumn, Unique } from 'typeorm';
+import { Entity, ObjectIdColumn, Column, BeforeInsert, BeforeUpdate } from 'typeorm';
+import { ObjectId } from 'mongodb';
 
-@Entity({name:"users"})
+@Entity({ name: 'users' })
 export class User {
 
     @ApiProperty({
         description: 'Identificador único del usuario',
         type: String,
     })
-    @PrimaryGeneratedColumn('uuid')
-    id:string;
+    @ObjectIdColumn()
+    id: ObjectId;
 
     //* Mail de los usuarios
     @ApiProperty({
         description: 'Correo del usuario',
         type: String,
     })
-    @Column('text', {
-        unique:true
+    @Column({
+        unique: true
     })
-    email:string;
+    email: string;
 
     //* Password
     @ApiProperty({
         description: 'Contraseña de los usuarios',
         type: String,
     })
-    @Column('text', {
-        select:false
+    @Column({
+        select: false
     })
-    password:string;
+    password: string;
 
     //* FullName
-     @ApiProperty({
+    @ApiProperty({
         description: 'Nombre completo de los usuarios',
         type: String,
     })
-    @Column('text')
-    fullName:string;
+    @Column()
+    fullName: string;
 
-    @ApiProperty({
-        description: 'Matricula of the user for the UPSRJ',
+     //* FullName
+     @ApiProperty({
+        description: 'Matricula de los usuarios',
         type: String,
     })
-    @Column('text')
+    @Column()
     matricula: string;
 
     //* IsActive
     @ApiProperty({
-        description: 'Los usuarios no se elimina, solo se dan de baja con un boolean',
+        description: 'Los usuarios no se eliminan, solo se dan de baja con un boolean',
         type: Boolean,
     })
-    @Column('bool' , {
-        default:true
+    @Column({
+        default: true
     })
-    isActive:boolean;
+    isActive: boolean;
 
-    // isDeleted)
-    @ApiProperty({description: 'Eliminar usuario logicamente (soft delete)', 
-        type: Boolean
-    })
-    @Column('bool',{
-        default: false 
-    })
-    isDeleted: boolean;
 
-    @OneToMany(
-        () => Permission,
-        (permission) => permission.user,
-        { cascade: true , eager: true }
-    )
-    permissions: Permission[];
-    
+    @ApiProperty({ description: 'List of access right IDs', type: 'array', items: { type: 'string', format: 'ObjectId' } })
+    @Column()
+    accessRights: ObjectId[];
+
     @BeforeInsert()
     checkFieldsInsert() {
-
-        this.email = this.email
-            .toLowerCase()
-            .trim();
+        this.email = this.email.toLowerCase().trim();
     }
 
     @BeforeUpdate()
     checkFieldsBeforeUpdate() {
-
-        this.email = this.email
-            .toLowerCase()
-            .trim();
+        this.email = this.email.toLowerCase().trim();
     }
-
-}   
-
+}

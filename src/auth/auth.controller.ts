@@ -1,10 +1,13 @@
-import { Controller, Get, Post, Body, Param, Patch, Delete, ParseUUIDPipe} from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req, SetMetadata } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+import { get, request } from 'http';
+
 import { AuthService } from './auth.service';
-import { CreateUserDto, LoginUserDto, UpdateUserDto, UpdateUserStatusDto } from './dto';
+import { CreateUserDto, LoginUserDto } from './dto';
 import { User } from './entities/user.entity';
 import { GetUser } from './decorators/get-user.decorator';
+import { Auth } from './decorators/auth.decorator';
 import { ApiResponse } from '@nestjs/swagger';
-
 
 
 @Controller('auth')
@@ -27,37 +30,16 @@ export class AuthController {
     return this.authService.login(loginUserDto);
   }
 
- // Gestion de usuarios (woods)
 
-  @ApiResponse({ status: 200, description: 'User updated successfully' })
-  @Patch(':id')
-  async updateUser(
-      @Param('id', ParseUUIDPipe) id: string,
-      @Body() updateUserDto: UpdateUserDto,
-  ) {
-      return this.authService.updateUser(id, updateUserDto);
-  }
-
-  @ApiResponse({ status: 200, description: 'User status updated successfully' })
-  @Patch(':id/status')
-  async updateUserStatus(
-      @Param('id', ParseUUIDPipe) id: string,
-      @Body() updateUserStatusDto: UpdateUserStatusDto,
-  ) {
-      return this.authService.updateUserStatus(id, updateUserStatusDto);
-  }
-
-  @ApiResponse({ status: 200, description: 'User soft deleted successfully' })
-  @Patch(':id/soft-delete')
-  async softDeleteUser(@Param('id', ParseUUIDPipe) id: string) {
-      return this.authService.softDeleteUser(id);
-  }
-
-  @ApiResponse({ status: 200, description: 'User permanently deleted successfully' })
-  @Delete(':id')
-  async deleteUser(@Param('id', ParseUUIDPipe) id: string) {
-      await this.authService.deleteUser(id);
-      return { message: 'User permanently deleted successfully' };
+  @ApiResponse({ status: 201, description: 'User check-status', type: User})
+  @ApiResponse({ status: 400, description: 'Bad request due to invalid input' })
+  @ApiResponse({ status: 403, description: 'Forbidden. Token related issues' })
+  @Get('check-status')
+  @Auth()
+  checkAuthStatus(
+    @GetUser() user: User
+  ){
+    return this.authService.checkAuthStatus(user)
   }
 
 }

@@ -35,15 +35,4 @@ export class CreateUserDto{
     @IsString()
     @MinLength(1)
     fullName:string;
-
-    @ApiProperty({
-        example: '021000615',
-        description: 'Matricula de los usuarios',
-        type: "string"
-    })
-    @IsString()
-    @MinLength(8)
-    @MaxLength(9)
-    matricula:string;
-    
 }

@@ -8,13 +8,13 @@ import { AuthService } from './auth.service';
 import { User } from './entities/user.entity';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
-import { PermissionModule } from 'src/permission/permission.module';
+import { AccessRightsModule } from 'src/access-rights/access-rights.module';
 
 @Module({
   controllers: [AuthController],
   imports:[
     ConfigModule,
-    PermissionModule,
+    AccessRightsModule,
     TypeOrmModule.forFeature([User]),
     PassportModule.register({defaultStrategy: 'jwt'}),
 
@@ -22,8 +22,8 @@ import { PermissionModule } from 'src/permission/permission.module';
       imports:[ConfigModule],
       inject:[ConfigService],
       useFactory:(configService:ConfigService) => {
-        //console.log(`Secret Jwt: ${configService.get('JWT_SECRET')}`)
-        //console.log(`Secret Jwt: ${process.env.JWT_SECRET}`)
+        console.log(`Secret Jwt: ${configService.get('JWT_SECRET')}`)
+        console.log(`Secret Jwt: ${process.env.JWT_SECRET}`)
         return{
           secret: configService.get('JWT_SECRET'),
           signOptions:{

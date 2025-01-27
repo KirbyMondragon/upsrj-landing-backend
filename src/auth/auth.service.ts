@@ -1,68 +1,74 @@
-import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { 
+  BadRequestException, 
+  Injectable, 
+  InternalServerErrorException, 
+  UnauthorizedException 
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
 
 import * as bcrypt from 'bcrypt';  
-import { Repository } from 'typeorm';
-
+import { MongoRepository } from 'typeorm';
 import { User } from './entities/user.entity';
-import { LoginUserDto, CreateUserDto, UpdateUserDto, UpdateUserStatusDto } from './dto';
+import { LoginUserDto, CreateUserDto } from './dto';
 import { JwtPayload } from './interfaces/jwt.payload.interface';
-import { PermissionService } from 'src/permission/permission.service';
-import { UUID } from 'crypto';
-
+import { AccessRightsService } from '../access-rights/access-rights.service';
 
 @Injectable()
 export class AuthService {
   constructor( 
     @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
-    private readonly jwtService:JwtService,
-    private readonly permissionService: PermissionService
-  ){}
-  
+    private readonly userRepository: MongoRepository<User>,  // Cambio a MongoRepository para compatibilidad con MongoDB
+    private readonly accessRightsService:AccessRightsService, 
+    private readonly jwtService: JwtService
+  ) {}
+
   async create(createUserDto: CreateUserDto) {
     try {
       const { password, ...userData } = createUserDto;
-      
-      // Hash the password using bcrypt
-      const hashedPassword = await bcrypt.hashSync(password, 10);
-
+  
+      // Hash de la contraseña usando bcrypt
+      const hashedPassword = await bcrypt.hash(password, 10);
+  
+      // Crear la instancia del usuario con valores predeterminados para propiedades ausentes en el DTO
       const user = this.userRepository.create({
         ...userData,
-        password: hashedPassword  // Use the hashed password
+        password: hashedPassword,
+        isActive: true,  // Se establece el valor predeterminado manualmente
       });
-
-      await this.userRepository.save(user);
-
-
-      //Crear sus permisos
-      await this.permissionService.createPermission(user);
-      delete user.password;
-
+  
+      // Guardar el usuario en la base de datos
+      const newUser =  await this.userRepository.save(user);
       
-      const userReturn = await this.getUser(user.id);
-      
-
+      await this.accessRightsService.createPermission(user);
+      // Eliminar datos sensibles antes de retornar
+      delete newUser.password;
+  
       return {
-        user: userReturn,
-        //...user, con este no mandamos la informacion de permisos
-        token: this.getJwtToken({id: user.id})
+        ...newUser,
+        token: this.getJwtToken({ id: newUser.id.toString() }),  // Convertir ObjectId a string
       };
-
     } catch (error) {
       this.handleDBErrors(error);
     }
   }
+  
+
+  async checkAuthStatus(user: User) {
+    return {
+      ...user,
+      token: this.getJwtToken({ id: user.id.toString() })  // Convierte ObjectId a string
+    };
+  }
 
   async login(loginUserDto: LoginUserDto) {
     const { password, email } = loginUserDto;
-    
     const mailLowerCase = email.toLowerCase().trim();
+    
     // Buscar el usuario y seleccionar solo el correo y la contraseña
     const user = await this.userRepository.findOne({
-        where: { email: mailLowerCase},
-        select: {email: true, password: true, id:true },
+        where: { email: mailLowerCase },
+        select: { email: true, password: true, id: true },
     });
     
     // Verificar si el usuario existe
@@ -82,68 +88,20 @@ export class AuthService {
     
     return {
       ...user,
-      token: this.getJwtToken({id: user.id})
-    }; // O puedes devolver un token de autenticación en lugar del usuario.
-}
+      token: this.getJwtToken({ id: user.id.toString() })  // Convierte ObjectId a string
+    };
+  }
 
-  async getUser(id:string){
-    const user = this.userRepository.findOneBy({id});
-    return user;
-  };
-  
-  private getJwtToken(payload: JwtPayload){
-    const token = this.jwtService.sign(payload);
-    return token;
+  private getJwtToken(payload: JwtPayload) {
+    return this.jwtService.sign(payload);
   }
 
   private handleDBErrors(error: any): never {
-    if (error.code === '23505') {
-      throw new BadRequestException(error.details);
+    if (error.code === 11000) {  // MongoDB duplicate key error code
+      throw new BadRequestException('Duplicate entry detected');
     }
 
-    console.log(error);
-
+    console.error(error);
     throw new InternalServerErrorException('Please check server logs');
   }
-
-  //Gestion de usuarios (woods)
-
-  async updateUser(id: string, updateUserDto: UpdateUserDto): Promise<User> {
-    const user = await this.userRepository.findOne({ where: { id, isDeleted: false } });
-    if (!user) {
-      throw new NotFoundException(`User with ID ${id} not found or has been deleted`);
-    }
-    Object.assign(user, updateUserDto);
-    return this.userRepository.save(user);
-  }
-
-  async updateUserStatus(id: string, updateUserStatusDto: UpdateUserStatusDto): Promise<User> {
-      const user = await this.userRepository.findOne({ where: { id, isDeleted: false } });
-      if (!user) {
-      throw new NotFoundException(`User with ID ${id} not found or has been deleted`);
-      }
-      user.isActive = updateUserStatusDto.isActive;
-      return this.userRepository.save(user);
-  }
-
-  async softDeleteUser(id: string): Promise<User> {
-      const user = await this.userRepository.findOne({ where: { id, isDeleted: false } });
-      if (!user) {
-      throw new NotFoundException(`User with ID ${id} not found or already deleted`);
-      }
-      user.isDeleted = true;
-      return this.userRepository.save(user);
-  }
-
-  async deleteUser(id: string): Promise<void> {
-      const user = await this.userRepository.findOne({ where: { id } });
-      if (!user) {
-      throw new NotFoundException(`User with ID ${id} not found`);
-      }
-      if (!user.isDeleted) {
-      throw new BadRequestException(`User with ID ${id} must be soft deleted before permanent removal`);
-      }
-      await this.userRepository.delete(id);
-  }
-
 }
