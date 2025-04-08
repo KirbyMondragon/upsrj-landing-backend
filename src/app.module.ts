@@ -5,6 +5,7 @@ import { AuthModule } from './auth/auth.module';
 import { AccessRightsModule } from './access-rights/access-rights.module';
 import { SeedModule } from './seed/seed.module';
 import { SeedService } from './seed/seed.service';
+import { PuckComponentsModule } from './puck-components/puck-components.module';
 
 @Module({
   providers: [SeedService],
@@ -24,6 +25,7 @@ import { SeedService } from './seed/seed.service';
     AuthModule,
     SeedModule,
     AccessRightsModule,
+    PuckComponentsModule,
   ]
 })
 export class AppModule implements OnModuleInit {
