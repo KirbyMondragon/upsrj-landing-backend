@@ -125,6 +125,81 @@ CONTAINER_NAME=NameOFTheContainer
 PASSWORD_SEED='SecretoContraseña'
 ```
 
+## Módulo de Imágenes con GridFS
+
+El backend utiliza GridFS con MongoDB para almacenar y gestionar imágenes de manera eficiente. Este módulo facilita la integración con Puck para la visualización de imágenes en el frontend.
+
+### Características
+- Procesamiento de imágenes con Sharp (redimensionamiento y optimización)
+- Almacenamiento en GridFS de MongoDB
+- Conversión automática a formato WebP para mejor rendimiento
+- API REST para cargar, obtener y eliminar imágenes
+
+### Dependencias necesarias
+```bash
+# Instalación de Sharp para procesamiento de imágenes
+pnpm add sharp
+
+# Aprobar scripts de compilación de Sharp
+pnpm approve-builds sharp
+```
+
+### Uso en el Frontend con Puck
+
+1. **Subir una imagen**:
+   ```typescript
+   // Ejemplo de cómo subir una imagen desde el frontend
+   async function uploadImage(file) {
+     // Convertir archivo a base64
+     const base64 = await fileToBase64(file);
+     
+     const response = await fetch('http://localhost:3000/api/images', {
+       method: 'POST',
+       headers: {
+         'Content-Type': 'application/json',
+         'Authorization': `Bearer ${token}`
+       },
+       body: JSON.stringify({
+         base64Image: base64,
+         width: 500,  // opcional
+         height: 300  // opcional
+       })
+     });
+     
+     const data = await response.json();
+     return data.imageUrl; // URL para usar en Puck
+   }
+   
+   // Función auxiliar para convertir archivo a base64
+   function fileToBase64(file) {
+     return new Promise((resolve, reject) => {
+       const reader = new FileReader();
+       reader.readAsDataURL(file);
+       reader.onload = () => resolve(reader.result);
+       reader.onerror = error => reject(error);
+     });
+   }
+   ```
+
+2. **Usar la imagen en Puck**:
+   ```typescript
+   // En el componente Puck
+   const MyPuckComponent = {
+     defaultProps: {
+       imageUrl: '',
+     },
+     render: ({ imageUrl }) => (
+       <div>
+         {imageUrl && <img src={`http://localhost:3000/api${imageUrl}`} alt="Uploaded image" />}
+       </div>
+     )
+   }
+   ```
+
+3. **Peticiones de imágenes directas**:
+   - Acceder directamente a una imagen: `http://localhost:3000/api/images/{uuid}`
+   - Listar todas las imágenes: `http://localhost:3000/api/images`
+
 ### 4. Database Setup with Docker
 ```bash
 $ docker-compose up -d

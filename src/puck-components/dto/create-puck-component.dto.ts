@@ -1,6 +1,10 @@
 import { IsString, IsObject, IsOptional, ValidateNested, IsArray } from 'class-validator';
 import { Type } from 'class-transformer';
 
+/**
+ * Class representing the content structure of a Puck component
+ * Contains type, props, and optional readOnly settings
+ */
 class PuckContent {
     @IsString()
     type: string;
@@ -20,6 +24,10 @@ class PuckContent {
     };
 }
 
+/**
+ * Class representing the root configuration of a Puck component
+ * Contains props and optional readOnly settings
+ */
 class PuckRoot {
     @IsObject()
     props: {
@@ -33,6 +41,10 @@ class PuckRoot {
     };
 }
 
+/**
+ * Class representing a zone item in a Puck component
+ * Zone items are nested components within the main component
+ */
 class PuckZoneItem {
     @IsString()
     type: string;
@@ -50,6 +62,10 @@ class PuckZoneItem {
     };
 }
 
+/**
+ * Data Transfer Object for creating a new Puck component
+ * Validates the structure of the component data before processing
+ */
 export class CreatePuckComponentDto {
     @ValidateNested()
     @Type(() => PuckContent)
@@ -64,5 +80,4 @@ export class CreatePuckComponentDto {
     @ValidateNested({ each: true })
     @Type(() => PuckZoneItem)
     zones: Record<string, PuckZoneItem[]>;
-
 }

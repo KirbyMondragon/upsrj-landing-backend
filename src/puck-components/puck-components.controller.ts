@@ -1,9 +1,10 @@
-import { Controller, Get, Post, Body, Param, Patch, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Patch, Delete, Query } from '@nestjs/common';
 import { PuckComponentsService } from './puck-components.service';
 import { CreatePuckComponentDto } from './dto/create-puck-component.dto';
 import { UpdatePuckComponentDto } from './dto/update-puck-component.dto';
 import { PuckComponent } from './entities/puck-component.entity';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { PaginationDto } from '../common/dtos/pagination.dto';
 
 @ApiTags('Puck Components')
 @Controller('puck-components')
@@ -22,8 +23,8 @@ export class PuckComponentsController {
     @ApiResponse({ status: 200, description: 'Lista de todos los componentes', type: [PuckComponent] })
     @ApiResponse({ status: 500, description: 'Error en el servidor' })
     @Get()
-    async findAll(): Promise<PuckComponent[]> {
-        return this.puckComponentsService.findAll();
+    async findAll(@Query() paginationDto: PaginationDto): Promise<PuckComponent[]> {
+        return this.puckComponentsService.findAll(paginationDto);
     }
 
     @ApiOperation({ summary: 'Obtener un componente por su ID' })
