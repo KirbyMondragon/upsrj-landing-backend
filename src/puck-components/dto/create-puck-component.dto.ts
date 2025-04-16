@@ -1,4 +1,4 @@
-import { IsString, IsObject, IsOptional, ValidateNested, IsArray } from 'class-validator';
+import { IsString, IsObject, IsOptional, ValidateNested, IsArray, IsDefined } from 'class-validator';
 import { Type } from 'class-transformer';
 
 /**
@@ -67,6 +67,11 @@ class PuckZoneItem {
  * Validates the structure of the component data before processing
  */
 export class CreatePuckComponentDto {
+
+    @IsOptional()   
+    @IsString()
+    slug?: string;
+
     @ValidateNested()
     @Type(() => PuckContent)
     content: PuckContent;
@@ -76,8 +81,7 @@ export class CreatePuckComponentDto {
     @Type(() => PuckRoot)
     root: PuckRoot;
 
+    @IsDefined()
     @IsObject()
-    @ValidateNested({ each: true })
-    @Type(() => PuckZoneItem)
     zones: Record<string, PuckZoneItem[]>;
 }

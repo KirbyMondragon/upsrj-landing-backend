@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { MongoRepository } from 'typeorm';
 import { PuckComponent } from './entities/puck-component.entity';
@@ -19,9 +19,13 @@ export class PuckComponentsService {
    * @param dto The data transfer object containing component details
    * @returns The newly created component
    */
-  async create(dto: CreatePuckComponentDto){
-    const newComponent = this.puckRepository.create(dto);
-    return await this.puckRepository.save(newComponent);
+  async create(dto: CreatePuckComponentDto) {
+    const slug = this.slugify(dto.slug || dto.root?.props?.title || 'sin-titulo');
+  
+    const exists = await this.puckRepository.findOneBy({ slug });
+    if (exists) throw new BadRequestException(`Ya existe un componente con el slug: "${slug}"`);
+  
+    return this.puckRepository.save({ ...dto, slug });
   }
 
   /**
@@ -70,5 +74,16 @@ export class PuckComponentsService {
   async remove(id: string) {
     const component = await this.findOne(id); // lanza error si no existe
         await this.puckRepository.remove(component);
+  }
+
+  private slugify(text: string): string {
+    return text
+      .toLowerCase()
+      .trim()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // quita acentos
+      .replace(/[^\w\s-]/g, '')        // quita símbolos
+      .replace(/\s+/g, '-')            // reemplaza espacios por guiones
+      .replace(/--+/g, '-');           // evita múltiples guiones seguidos
   }
 }
