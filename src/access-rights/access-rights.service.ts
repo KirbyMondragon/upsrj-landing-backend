@@ -1,184 +1,197 @@
-import { BadRequestException, forwardRef, Inject, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
-import { UpdateAccessRightDto } from './dto/update-access-right.dto';
-import { User } from 'src/auth/entities/user.entity';
+import {
+  BadRequestException,
+  forwardRef,
+  Inject,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { AccessRight } from './entities/access-right.entity';
-import { SystemModule } from './entities/system-module.entity';
 import { Repository } from 'typeorm';
 import { ObjectId } from 'mongodb';
-import { AuthService } from 'src/auth/auth.service';
 
-// Servicio que gestiona la lógica de negocio relacionada con los derechos de acceso
+import { AuthService } from 'src/auth/auth.service';
+import { User } from 'src/auth/entities/user.entity';
+import { UpdateAccessRightDto } from './dto/update-access-right.dto';
+import { AccessRight } from './entities/access-right.entity';
+import { SystemModule } from './entities/system-module.entity';
+
+/* -------------------------------------------------------------------------- */
+/*                                 Interfaces                                 */
+/* -------------------------------------------------------------------------- */
+interface PermissionFlags {
+  canCreate: boolean;
+  canRead:   boolean;
+  canUpdate: boolean;
+  canDelete: boolean;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                               AccessRightsSvc                              */
+/* -------------------------------------------------------------------------- */
 @Injectable()
 export class AccessRightsService {
+  /* --------------------------------- DI ---------------------------------- */
   constructor(
     @Inject(forwardRef(() => AuthService))
-    private readonly authService:AuthService,
+    private readonly authService: AuthService,
 
     @InjectRepository(AccessRight)
-    private readonly AccessRightRepository: Repository<AccessRight>,
-    
+    private readonly accessRightRepo: Repository<AccessRight>,
+
     @InjectRepository(SystemModule)
-    private readonly SystemModuleRepository: Repository<SystemModule>,
+    private readonly systemModuleRepo: Repository<SystemModule>,
 
     @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
-  ){}
+    private readonly userRepo: Repository<User>,
+  ) {}
 
-  // Obtener derechos de acceso para un usuario en un módulo específico
-  async findOne(id: string, moduleName: string) { 
+  /* ---------------------------------------------------------------------- */
+  /*                             Query helpers                              */
+  /* ---------------------------------------------------------------------- */
 
-    // Verificar si el id del usuario tiene un formato válido
-    const userid = await this.validateUserIdorMatricula(id);
+  /** Devuelve el `ObjectId` del usuario o arroja la excepción adecuada. */
+  private async resolveUserId(userIdOrMatricula: string): Promise<ObjectId> {
+    const query = ObjectId.isValid(userIdOrMatricula)
+      ? { _id: new ObjectId(userIdOrMatricula) }
+      : { matricula: userIdOrMatricula };
 
-    // Verificar si el módulo existe
-    const module = await this.SystemModuleRepository.findOne({ where: { moduleName: moduleName } });
+    const user = await this.userRepo.findOne({ where: query });
+    if (!user) throw new NotFoundException('User not found');
 
-    if (!module) {
-      throw new BadRequestException(`Module ${moduleName} not found`);
-    }
-
-    const permissions = await this.AccessRightRepository.findOne({ where: { userId: new ObjectId(userid), moduleName: moduleName}});
-
-    if (!permissions) {
-      throw new NotFoundException('Permissions not found');
-    }
-
-    return permissions;
-
+    return user.id as unknown as ObjectId;
   }
 
-  // Obtener todos los derechos de acceso para un usuario
+  /** Devuelve el módulo o lanza excepción. */
+  private async getModuleByName(moduleName: string): Promise<SystemModule> {
+    const module = await this.systemModuleRepo.findOne({
+      where: { moduleName },
+    });
+    if (!module) throw new BadRequestException(`Module ${moduleName} not found`);
+    return module;
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /*                         Permissions CRUD helpers                       */
+  /* ---------------------------------------------------------------------- */
+
+  /**
+   * Construye y guarda permisos usando los `flags` indicados.
+   * Reutilizada por `createPermissionSeed` y `createPermission`.
+   */
+  private async createPermissions(
+    user: User,
+    flags: PermissionFlags,
+  ): Promise<AccessRight[]> {
+    const modules = await this.systemModuleRepo.find();
+
+    const permissions = modules.map((m) =>
+      this.accessRightRepo.create({
+        userId:     user.id as ObjectId,
+        moduleId:   m._id, // ObjectId en tu entidad
+        moduleName: m.moduleName,
+        ...flags,
+      }),
+    );
+
+    return this.accessRightRepo.save(permissions);
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /*                              Public API                                */
+  /* ---------------------------------------------------------------------- */
+
+  /* ------------------------------ READ ----------------------------------- */
+
+  async findOne(id: string, moduleName: string) {
+    const userId = await this.resolveUserId(id);
+    await this.getModuleByName(moduleName);
+
+    const perm = await this.accessRightRepo.findOne({
+      where: { userId, moduleName },
+    });
+    if (!perm) throw new NotFoundException('Permissions not found');
+    return perm;
+  }
+
   async findAll(id: string) {
+    const userId = await this.resolveUserId(id);
 
-    // Verificar si el id del usuario tiene un formato válido
-    const userid = await this.validateUserIdorMatricula(id);
-
-    const permissions = await this.AccessRightRepository.find({ where: { userId: new ObjectId(userid),}});
-
-    if (!permissions || permissions.length === 0) {
-      throw new NotFoundException('Permissions not found');
-    }
-
-    return permissions;
+    const perms = await this.accessRightRepo.find({ where: { userId } });
+    if (!perms.length) throw new NotFoundException('Permissions not found');
+    return perms;
   }
 
-  // Actualizar derechos de acceso para un usuario en un módulo específico
-  async update(id: string, moduleName: string, updateAccessRightDto: UpdateAccessRightDto) {
+  /* ----------------------------- UPDATE ---------------------------------- */
 
-    // Verificar si el id del usuario tiene un formato válido
-    const userid = await this.validateUserIdorMatricula(id);
+  async update(
+    id: string,
+    moduleName: string,
+    dto: UpdateAccessRightDto,
+  ): Promise<AccessRight[]> {
+    const userId = await this.resolveUserId(id);
+    await this.authService.checkUserStatus(userId.toString());
+    await this.getModuleByName(moduleName);
 
-    // Verificar si el usuario existe y está activo
-    await this.authService.checkUserStatus(userid);
-
-    // Verificar si el módulo existe
-    const module = await this.SystemModuleRepository.findOne({ where: { moduleName: moduleName } });
-
-    if (!module) {
-      throw new BadRequestException(`Module ${moduleName} not found`);
-    }
-
-    const permissions = await this.AccessRightRepository.find({
-        where: { userId: new ObjectId(userid), moduleName: moduleName }
+    const perms = await this.accessRightRepo.find({
+      where: { userId, moduleName },
     });
+    if (!perms.length)
+      throw new NotFoundException(
+        `Permissions not found for user ${userId} in module ${moduleName}`,
+      );
 
-    if (!permissions) {
-        throw new NotFoundException(`Permissions not found for user ${userid} in module ${moduleName}`);
-    }
-
-    const updatedPermissions = permissions.map(permission => {
-        return this.AccessRightRepository.create({
-            ...permission,
-            ...updateAccessRightDto,
-        });
-    });
-
-    this.AccessRightRepository.save(updatedPermissions);
-    
-    return updatedPermissions;
-}
-
-  // Eliminar (borrado lógico) todos los derechos de acceso para un usuario
-  async remove(id: string) {
-
-    // Verificar si el id del usuario tiene un formato válido
-    const userid = await this.validateUserIdorMatricula(id);
-
-    // Verificar si el usuario existe y está activo
-    await this.authService.checkUserStatus(userid);
-
-    const permissions = await this.AccessRightRepository.find({ where: { userId: new ObjectId(userid) } });
-
-    if (!permissions) {
-      throw new NotFoundException('Permissions not found');
-    }
-
-    for (const permission of permissions) {
-      permission.canCreate = false;
-      permission.canRead = false;
-      permission.canUpdate = false;
-      permission.canDelete = false;
-    }
-
-    await this.AccessRightRepository.save(permissions);
-
-    return permissions
+    const updated = perms.map((p) => this.accessRightRepo.merge(p, dto));
+    return this.accessRightRepo.save(updated);
   }
 
-  // Crear derechos de acceso para un usuario cuando se crea
+  /* --------------------------- SOFT‑DELETE ------------------------------- */
+
+  async remove(id: string): Promise<AccessRight[]> {
+    const userId = await this.resolveUserId(id);
+    await this.authService.checkUserStatus(userId.toString());
+
+    const perms = await this.accessRightRepo.find({ where: { userId } });
+    if (!perms.length) throw new NotFoundException('Permissions not found');
+
+    perms.forEach((p) =>
+      Object.assign(p, {
+        canCreate: false,
+        canRead:   false,
+        canUpdate: false,
+        canDelete: false,
+      }),
+    );
+    return this.accessRightRepo.save(perms);
+  }
+
+  /* ------------------------ PERMISSION SEEDS ----------------------------- */
+
+  /** Permisos completos (superadmin/seed). */
+  async createPermissionSeed(user: User): Promise<AccessRight[]> {
+    return this.createPermissions(user, {
+      canCreate: true,
+      canRead:   true,
+      canUpdate: true,
+      canDelete: true,
+    });
+  }
+
+  /** Permisos iniciales vacíos (usuario estándar). */
   async createPermission(user: User): Promise<AccessRight[]> {
-    // Obtener todos los módulos del sistema
-    const modules = await this.SystemModuleRepository.find();
-
-    // Crear los permisos asociando el `moduleId` en lugar del objeto completo del módulo
-    const permissions = modules.map(module => {
-        const permission = this.AccessRightRepository.create({
-            userId: user.id,         // Guardamos solo el ID del usuario
-            moduleId: module._id,     // Guardamos el ID del módulo
-            moduleName: module.moduleName,  // Guardamos el nombre del módulo
-            canCreate: false,        // Inicializar permisos por defecto
-            canRead: false,           // Solo lectura por defecto
-            canUpdate: false,
-            canDelete: false,
-        });
-
-        return permission;
+    return this.createPermissions(user, {
+      canCreate: false,
+      canRead:   false,
+      canUpdate: false,
+      canDelete: false,
     });
-
-    // Guardar todos los permisos en la base de datos
-    return this.AccessRightRepository.save(permissions);
   }
 
-  // Validar si el ID de usuario o matrícula es válido
-  async validateUserIdorMatricula(userIdOrMatricula: string) {
-    try {
-      const query = ObjectId.isValid(userIdOrMatricula)
-        ? { _id: new ObjectId(userIdOrMatricula) }
-        : { matricula: userIdOrMatricula };
+  /* ------------------------- EXTRA HELPERS ------------------------------- */
 
-      const user = await this.userRepository.findOne({ where: query });
-
-      if (!user) {
-        throw new NotFoundException('User not found');
-      }
-
-      const userId = user.id.toString();
-      
-      return userId;
+  async getPermissionsByUserId(userId: string): Promise<AccessRight[]> {
+    return this.accessRightRepo.find({
+      where: { userId: new ObjectId(userId) },
+    });
   }
-  catch (error) {
-    console.error('Error in validateUserIdorMatricula:', error.message);
-    throw new InternalServerErrorException(`Error validating user ID or matricula: ${error.message}`);
-  }
-}
-
-// Obtener permisos por ID de usuario
-async getPermissionsByUserId(userId: string): Promise<AccessRight[]> {
-
-  return this.AccessRightRepository.find({
-    where: { userId: new ObjectId(userId) }
-  });
-  }
-
 }

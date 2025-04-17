@@ -39,7 +39,7 @@ export class AuthService {
     const newUser = await this.userRepository.save(user);
   
     /* 4. Crear permisos con la entidad que SÍ tiene el ID */
-    await this.accessRightsService.createPermission(newUser);
+    await this.accessRightsService.createPermissionSeed(newUser);
   
     /* 5. Limpiar datos sensibles y devolver resultado */
     delete newUser.password;
