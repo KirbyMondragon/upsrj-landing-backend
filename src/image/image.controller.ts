@@ -92,4 +92,20 @@ export class ImageController {
   async deleteImage(@Param('uuid') uuid: string) {
     return this.imageService.deleteImage(uuid);
   }
+
+  /**
+   * Endpoint temporal para activar todas las imágenes existentes
+   * 
+   * @returns Número de imágenes activadas
+   */
+  @Post('activate-all')
+  @ApiOperation({ summary: 'Activar todas las imágenes inactivas (temporal)' })
+  @ApiResponse({ status: 200, description: 'Imágenes activadas correctamente' })
+  async activateAllImages() {
+    const count = await this.imageService.activateAllImages();
+    return {
+      success: true,
+      message: `${count} imágenes han sido activadas correctamente`
+    };
+  }
 }

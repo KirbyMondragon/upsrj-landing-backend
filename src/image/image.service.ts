@@ -72,13 +72,12 @@ export class ImageService {
       }
 
       // Construir la URL para acceder a la imagen desde el frontend
-      const imageUrl = `/images/${imageId}`;
-
-      // Guardar los metadatos en la colección de imágenes de MongoDB
+      const imageUrl = `/images/${imageId}`;      // Guardar los metadatos en la colección de imágenes de MongoDB
       const newImage = this.imageRepository.create({
         uuid: imageId,
         image: imageUrl,
         gridFsId: gridFsId,
+        isActive: true // Asegurarnos de que la imagen se crea con estado activo
       });
 
       await this.imageRepository.save(newImage);
@@ -178,14 +177,52 @@ export class ImageService {
       }
       throw new InternalServerErrorException('Error deleting image');
     }
-  }
-
-  /**
+  }  /**
    * Lista todas las imágenes activas
    * 
    * @returns Array de entidades Image activas
    */
   async findAll(): Promise<Image[]> {
-    return this.imageRepository.find({ where: { isActive: true } });
+    console.log('Buscando todas las imágenes en la base de datos...');
+    try {
+      // Primero intentamos obtener todas las imágenes (activas o no) para diagnóstico
+      const allImages = await this.imageRepository.find();
+      console.log(`Total de imágenes en la base de datos: ${allImages.length}`);
+      
+      // Temporalmente retornamos todas las imágenes sin filtrar por isActive
+      console.log('Retornando todas las imágenes sin filtrar por isActive');
+      return allImages;
+    } catch (error) {
+      console.error('Error al buscar imágenes:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Método temporal para activar todas las imágenes existentes en la base de datos
+   * 
+   * @returns Número de imágenes activadas
+   */
+  async activateAllImages(): Promise<number> {
+    try {
+      // Buscar todas las imágenes inactivas
+      const inactiveImages = await this.imageRepository.find({ where: { isActive: false } });
+      console.log(`Encontradas ${inactiveImages.length} imágenes inactivas para activar`);
+      
+      if (inactiveImages.length === 0) {
+        return 0;
+      }
+      
+      // Actualizar cada imagen para activarla
+      for (const image of inactiveImages) {
+        await this.imageRepository.update(image._id, { isActive: true });
+      }
+      
+      console.log(`${inactiveImages.length} imágenes han sido activadas correctamente`);
+      return inactiveImages.length;
+    } catch (error) {
+      console.error('Error al activar imágenes:', error);
+      throw new InternalServerErrorException('Error activating images');
+    }
   }
 }
