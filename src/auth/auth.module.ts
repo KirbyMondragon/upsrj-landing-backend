@@ -35,6 +35,6 @@ import { AccessRightsModule } from 'src/access-rights/access-rights.module';
     })
   ],
   providers: [AuthService , JwtStrategy, AccessRightsService],
-  exports:[TypeOrmModule, JwtStrategy, PassportModule, JwtModule]
+  exports:[TypeOrmModule, AuthService, JwtStrategy, PassportModule, JwtModule]
 })
 export class AuthModule {}

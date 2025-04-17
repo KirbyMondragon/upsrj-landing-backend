@@ -1,4 +1,4 @@
-import { Entity, ObjectIdColumn, ObjectId, Column } from 'typeorm';
+import { Entity, ObjectIdColumn, ObjectId, Column, Index } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 
 // Entidad que representa un módulo del sistema
@@ -9,6 +9,7 @@ export class SystemModule {
     _id: ObjectId;
 
     @Column()
+    @Index({ unique: true })
     @ApiProperty({ description: 'Module name' })
     moduleName: string;
 

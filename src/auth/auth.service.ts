@@ -22,6 +22,34 @@ export class AuthService {
     private readonly jwtService: JwtService
   ) {}
 
+  async createSeed(createUserDto: CreateUserDto) {
+    const { password, ...userData } = createUserDto;
+  
+    /* 1. Hash de la contraseña */
+    const hashedPassword = await bcrypt.hash(password, 10);
+  
+    /* 2. Instanciar la entidad (todavía sin _id) */
+    const user = this.userRepository.create({
+      ...userData,
+      password: hashedPassword,
+      isActive: true,
+    });
+  
+    /* 3. Guardar y obtener la copia con _id */
+    const newUser = await this.userRepository.save(user);
+  
+    /* 4. Crear permisos con la entidad que SÍ tiene el ID */
+    await this.accessRightsService.createPermission(newUser);
+  
+    /* 5. Limpiar datos sensibles y devolver resultado */
+    delete newUser.password;
+  
+    return {
+      ...newUser,
+      token: this.getJwtToken({ id: newUser.id.toString() }),
+    };
+  }
+  
   // Crear un nuevo usuario
   async create(createUserDto: CreateUserDto) {
     try {

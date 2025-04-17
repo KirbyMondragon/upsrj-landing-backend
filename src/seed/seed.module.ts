@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { SeedService } from './seed.service';
 import { SeedController } from './seed.controller';
 
@@ -12,7 +12,7 @@ import { AccessRightsModule } from 'src/access-rights/access-rights.module';
   imports:[
     ConfigModule,
     AccessRightsModule,
-    AuthModule
+    forwardRef(() => AuthModule),  
   ]
 })
 // Módulo que gestiona la inicialización de datos en la base de datos
