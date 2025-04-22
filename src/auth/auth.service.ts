@@ -84,13 +84,6 @@ export class AuthService {
   }
   
 
-  async checkAuthStatus(user: User) {
-    return {
-      ...user,
-      token: this.getJwtToken({ id: user.id.toString() })  // Convierte ObjectId a string
-    };
-  }
-
   async login(loginUserDto: LoginUserDto) {
     const { password, email } = loginUserDto;
     const mailLowerCase = email.toLowerCase().trim();
@@ -224,10 +217,11 @@ export class AuthService {
   }
 
   async checkUserStatus(id: string) {
-    const user = await this.userRepository.findOne({
-      where: { _id: new ObjectId(id) }, 
-    });
+    const query = ObjectId.isValid(id)
+        ? { _id: new ObjectId(id) }
+        : { matricula: id };
 
+    const user = await this.userRepository.findOne({ where: query });
     if (!user || !user.isActive) {
       throw new NotFoundException('User not found or inactive');
     }

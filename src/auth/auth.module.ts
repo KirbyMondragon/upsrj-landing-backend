@@ -10,6 +10,7 @@ import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { AccessRightsService } from 'src/access-rights/access-rights.service';
 import { AccessRightsModule } from 'src/access-rights/access-rights.module';
+import { UserPermissionGuard } from './guards/user-permission.guard';
 
 @Module({
   controllers: [AuthController],
@@ -35,6 +36,6 @@ import { AccessRightsModule } from 'src/access-rights/access-rights.module';
     })
   ],
   providers: [AuthService , JwtStrategy, AccessRightsService],
-  exports:[TypeOrmModule, AuthService, JwtStrategy, PassportModule, JwtModule]
+  exports:[TypeOrmModule , AuthService, JwtStrategy, PassportModule, JwtModule]
 })
 export class AuthModule {}

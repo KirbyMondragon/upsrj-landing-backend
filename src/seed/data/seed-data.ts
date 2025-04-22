@@ -7,6 +7,8 @@ import { User } from 'src/auth/entities/user.entity';
 export const initialData: Partial<SystemModule>[] = [
     {  moduleName: 'Authentication', isActive: true },
     {  moduleName: 'Permission', isActive: true },
+    {  moduleName: 'Images', isActive: true },
+    {  moduleName: 'Puck', isActive: true },
 ];
 
 export const initialUsers:CreateUserDto[] = [

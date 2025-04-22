@@ -38,7 +38,6 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import * as multer from 'multer';
 import { Response } from 'express';
 import { ObjectId } from 'mongodb';
-
 import { UploadImageResponseDto } from './dto/upload-image.response';
 import { ParseObjectIdPipe } from '../common/pipes/parse-object-id.pipe';
 import { ImagesService } from './image.service';
@@ -79,6 +78,7 @@ export class ImagesController {
 
     // Delegamos el guardado al servicio
     const image = await this.imagesService.upload(file);
+
 
     // Construimos la respuesta estándar
     return {

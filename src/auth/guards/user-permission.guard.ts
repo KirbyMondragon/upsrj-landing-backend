@@ -4,7 +4,8 @@ import { Observable } from 'rxjs';
 import { META_PERMISSIONS } from '../decorators/permission-protected.decorator';
 import { User } from '../entities/user.entity';
 import { AccessRightsService } from 'src/access-rights/access-rights.service';
-import { Authentication, Permission } from '../interfaces';
+import { Authentication, Images, Permission, Puck } from './../interfaces/valid-permissions';
+
 
 @Injectable()
 export class UserPermissionGuard implements CanActivate {
@@ -14,7 +15,7 @@ export class UserPermissionGuard implements CanActivate {
   ) {}
   
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const requiredPermissions: (Authentication | Permission)[] = this.reflector.get(META_PERMISSIONS, context.getHandler()) || [];
+    const requiredPermissions: (Authentication| Images| Permission| Puck )[] = this.reflector.get(META_PERMISSIONS, context.getHandler()) || [];
   
     if (!requiredPermissions.length) return true;
   

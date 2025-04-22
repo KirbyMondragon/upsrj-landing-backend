@@ -2,6 +2,9 @@ import { Controller, Get, Body, Patch, Param, Query } from '@nestjs/common';
 import { AccessRightsService } from './access-rights.service';
 import { UpdateAccessRightDto } from './dto/update-access-right.dto';
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiQuery, ApiResponse } from '@nestjs/swagger';
+import { Auth } from 'src/auth/decorators';
+import { Permission } from 'src/auth/interfaces';
+
 
 // Controlador que maneja las solicitudes HTTP relacionadas con los derechos de acceso
 @Controller('access-rights')
@@ -16,6 +19,7 @@ export class AccessRightsController {
   @ApiResponse({ status: 400, description: 'Bad request. Invalid input data (moduleName)'})
   @ApiResponse({ status: 400, description: 'Bad request. Invalid input data (userId)'})
   @ApiResponse({ status: 404, description: 'Permission not found'})
+  //@Auth([Permission.canRead])
   @Get('getPermission/:userId')
   findOne(@Param('userId') UserId: string, @Query('module') moduleName: string) {
     return this.accessRightsService.findOne(UserId, moduleName);
@@ -26,6 +30,7 @@ export class AccessRightsController {
   @ApiResponse({ status: 200, description: 'Request successful'})
   @ApiResponse({ status: 400, description: 'Bad request. Invalid input data (userId)'})
   @ApiResponse({ status: 404, description: 'Permissions not found'})
+  //@Auth([Permission.canRead])
   @Get('getPermissions/:userId')
   findAll(@Param('userId') UserId: string) {
     return this.accessRightsService.findAll(UserId);
@@ -38,6 +43,7 @@ export class AccessRightsController {
   @ApiResponse({ status: 400, description: 'Bad request. Invalid input data (moduleName)'})
   @ApiResponse({ status: 400, description: 'Bad request. Invalid input data (userId)'})
   @ApiResponse({ status: 404, description: 'User not found or inactive'})
+  //@Auth([Permission.canUpdate])
   @Patch('updatePermissions/:userId')
   update(@Param('userId') UserId: string, @Query('module') moduleName: string, @Body() updateAccessRightDto: UpdateAccessRightDto) {
     return this.accessRightsService.update(UserId, moduleName, updateAccessRightDto);
@@ -48,6 +54,7 @@ export class AccessRightsController {
   @ApiResponse({ status: 200, description: 'Permissions removed successfully'})
   @ApiResponse({ status: 400, description: 'Bad request. Invalid input data (userId)'})
   @ApiResponse({ status: 404, description: 'User not found or inactive'})
+  //@Auth([Permission.canDelete])
   @Patch('removePermissions/:userId')
   remove(@Param('userId') UserId: string) {
     return this.accessRightsService.remove(UserId);
