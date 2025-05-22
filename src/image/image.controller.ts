@@ -49,7 +49,7 @@ import { ImageMetaDto, PaginatedImagesDto } from 'src/common/dtos/paginated-imag
 import { Auth } from 'src/auth/decorators';
 
 @ApiTags('Images')                    // Grupo Swagger
-@Controller('files/product')
+@Controller('files/images')
 @ApiBearerAuth('JWT-auth')          // Prefijo de ruta
 export class ImagesController {
   constructor(private readonly imagesService: ImagesService) {}

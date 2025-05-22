@@ -3,7 +3,7 @@
 /node_modules
 /build
 /postgres
-
+/mongodata
 # Logs
 logs
 *.log

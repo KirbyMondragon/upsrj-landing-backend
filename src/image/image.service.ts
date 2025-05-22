@@ -39,9 +39,9 @@ export class ImagesService {
 
     // 1️⃣  Procesado opcional (resize / conversión):
     const processedBuffer = await sharp(file.buffer)
-  .resize({ height: 1080 }) // mantiene el aspecto original
-  .webp() // convierte a formato webp
-  .toBuffer();
+    .resize({ height: 1080 }) // mantiene el aspecto original
+    .webp() // convierte a formato webp
+    .toBuffer();
 
     const contentType = file.mimetype; // mantenemos MIME original
 
