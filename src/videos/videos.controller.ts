@@ -10,6 +10,7 @@ import {
   BadRequestException,
   Headers,
   HttpCode,
+  Query,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
@@ -29,6 +30,7 @@ import { ParseObjectIdPipe } from '../common/pipes/parse-object-id.pipe';
 import { videoFileFilter } from './helpers/videoFileFilter.helper';
 import { UploadVideoResponseDto } from './dto/upload-video.response';
 import { Auth } from 'src/auth/decorators';
+import { Video } from './entities/video.entity';
 
 @ApiTags('Videos')
 @Controller('videos')
@@ -36,7 +38,7 @@ import { Auth } from 'src/auth/decorators';
 export class VideosController {
   constructor(private readonly videosService: VideosService) {}
 
-  @Auth([{ module: 'Videos', permission: 'canCreate' }])
+  @Auth([{ module: 'Images', permission: 'canCreate' }])
   @Post('upload')
   @ApiOperation({ summary: 'Subir un video' })
   @ApiConsumes('multipart/form-data')
@@ -60,6 +62,7 @@ export class VideosController {
   }
 
   @Get('stream/:id')
+  @Auth([{ module: 'Images', permission: 'canDelete' }])
   @ApiOperation({ summary: 'Reproducir/descargar un video por ID' })
   @ApiParam({ name: 'id', description: 'ObjectId del video en GridFS' })
   @ApiOkResponse({
@@ -83,7 +86,7 @@ export class VideosController {
     stream.pipe(res);
   }
 
-  @Auth([{ module: 'Videos', permission: 'canDelete' }])
+  @Auth([{ module: 'Images', permission: 'canDelete' }])
   @Delete(':id')
   @HttpCode(200)
   @ApiOperation({ summary: 'Eliminar un video por ID' })
@@ -92,6 +95,25 @@ export class VideosController {
     @Param('id', ParseObjectIdPipe) id: ObjectId,
   ): Promise<{ message: string }> {
     return this.videosService.deleteVideo(id);
+  }
+
+  @Get('stream')
+  @Auth([{ module: 'Images', permission: 'canRead' }])
+  @ApiOperation({ summary: 'Obtener videos paginados' })
+  @ApiOkResponse({ description: 'Devuelve una lista paginada de videos.' })
+  async getPaginatedVideos(
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+  ): Promise<{ data: Video[]; total: number; page: number; limit: number }> {
+    const skip = (page - 1) * limit;
+    const [data, total] = await this.videosService.getPaginatedVideos(skip, limit);
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+    };
   }
 }
 

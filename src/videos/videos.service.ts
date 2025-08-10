@@ -64,12 +64,16 @@ export class VideosService {
     // 2️⃣ Subir a GridFS
     const uploadStream = this.bucket.openUploadStream(file.originalname, {
       contentType: file.mimetype,
+      chunkSizeBytes: 255 * 1024, // 255 KB
     });
     uploadStream.end(file.buffer);
 
     const gridFsId: ObjectId = await new Promise((resolve, reject) => {
       uploadStream.on('finish', () => resolve(uploadStream.id));
-      uploadStream.on('error', reject);
+      uploadStream.on('error', (err) => {
+        this.logger.error(`Error al subir video: ${err.message}`);
+        reject(err);
+      });
     });
 
     this.logger.verbose(`Video almacenado en GridFS => ${gridFsId}`);
@@ -110,13 +114,38 @@ export class VideosService {
     }
 
     // 🎬 Lógica para procesar el rango
-    const [startStr, endStr] = rangeHeader.replace(/bytes=/, '').split('-');
-    const start = parseInt(startStr, 10);
+    const rangeMatch = rangeHeader.match(/bytes=(\d*)-(\d*)/);
+    if (!rangeMatch) {
+      throw new BadRequestException('Encabezado Range no válido. Formato esperado: bytes=<start>-<end>.');
+    }
+
+    const startStr = rangeMatch[1];
+    const endStr = rangeMatch[2];
+
+    const start = startStr ? parseInt(startStr, 10) : 0;
     const end = endStr ? parseInt(endStr, 10) : totalSize - 1;
+
+    if (isNaN(start) || isNaN(end) || start < 0 || end >= totalSize || start > end) {
+      throw new BadRequestException('Rango de bytes no válido.');
+    }
+
     const chunkSize = end - start + 1;
 
     // Prepara el stream de GridFS con el rango especificado
     const stream = this.bucket.openDownloadStream(id, { start, end });
+
+    stream.on('error', (err) => {
+      this.logger.error(`Error al leer el stream de GridFS: ${err.message}`);
+      throw new InternalServerErrorException('Error al procesar el stream del video.');
+    });
+
+    stream.on('data', (chunk) => {
+      this.logger.verbose(`Enviando chunk de tamaño: ${chunk.length}`);
+    });
+
+    stream.on('end', () => {
+      this.logger.verbose('Stream de GridFS finalizado correctamente.');
+    });
 
     return {
       headers: {
@@ -149,5 +178,13 @@ export class VideosService {
     this.logger.verbose(`Metadatos Video ${gridId} eliminados`);
 
     return { message: 'Video eliminado correctamente' };
+  }
+
+  async getPaginatedVideos(skip: number, limit: number): Promise<[Video[], number]> {
+    const [data, total] = await this.videoRepository.findAndCount({
+      skip,
+      take: limit,
+    });
+    return [data, total];
   }
 }
