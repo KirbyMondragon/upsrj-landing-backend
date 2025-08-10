@@ -1,3 +1,4 @@
+import 'reflect-metadata';
 // ...otros imports
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';

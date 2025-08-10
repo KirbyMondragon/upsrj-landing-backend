@@ -5,7 +5,7 @@ export class Video {
     @ObjectIdColumn()
     _id: ObjectId;
 
-    @Column()
+    @Column('objectid')
     gridFsId: ObjectId;
 
     @Column()
