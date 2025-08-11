@@ -170,7 +170,7 @@ export class VideosService {
   // solo cambian la entidad y los mensajes.
   
   async deleteVideo(gridId: ObjectId): Promise<{ message: string }> {
-    const meta = await this.videoRepository.findOneBy({ gridFsId: gridId });
+    const meta = await this.videoRepository.findOne({ where: { gridFsId: gridId } });
     if (!meta) throw new NotFoundException('Video no encontrado');
 
     try {
@@ -200,6 +200,7 @@ export class VideosService {
       duration: video.duration,
       width: video.width,
       height: video.height,
+      hash: video.hash, // Incluir el hash en los datos retornados
     }));
 
     return [modifiedData, total];

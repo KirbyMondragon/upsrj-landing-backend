@@ -4,6 +4,7 @@ import { PuckComponentsService } from './puck-components.service';
 import { CreatePuckComponentDto } from './dto/create-puck-component.dto';
 import { UpdatePuckComponentDto } from './dto/update-puck-component.dto';
 import { ObjectId } from 'mongodb';
+import { AccessRightsService } from '../access-rights/access-rights.service';
 
 // Mock para PaginationDto en lugar de importarlo
 class PaginationDto {
@@ -98,6 +99,10 @@ describe('PuckComponentsController', () => {
         {
           provide: PuckComponentsService,
           useValue: mockPuckComponentsService,
+        },
+        {
+          provide: AccessRightsService,
+          useValue: {},
         },
       ],
     }).compile();

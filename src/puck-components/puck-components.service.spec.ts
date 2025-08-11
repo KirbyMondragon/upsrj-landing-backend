@@ -16,7 +16,7 @@ class PaginationDto {
 
 // Mock de los datos para pruebas
 const mockPuckComponent = {
-  id: new ObjectId('507f1f77bcf86cd799439011'),
+  _id: new ObjectId('507f1f77bcf86cd799439011'),
   content: {
     type: 'section',
     props: {
@@ -114,18 +114,40 @@ describe('PuckComponentsService', () => {
   });
 
   describe('create', () => {
-    it('should create a new puck component', async () => {
+    it('should create a new puck component if slug does not exist', async () => {
       // Arrange
-      jest.spyOn(repository, 'create').mockReturnValue(mockPuckComponent as any);
-      jest.spyOn(repository, 'save').mockResolvedValue(mockPuckComponent as any);
+      const slug = 'test-slug';
+      const mockCreateDtoWithSlug = { ...mockCreateDto, slug };
+      const createdComponent = { ...mockPuckComponent, slug };
+
+      jest.spyOn(repository, 'findOneBy').mockResolvedValue(null); // No component exists
+      jest.spyOn(repository, 'save').mockResolvedValue(createdComponent as any);
 
       // Act
-      const result = await service.create(mockCreateDto);
+      const result = await service.create(mockCreateDtoWithSlug);
 
       // Assert
-      expect(repository.create).toHaveBeenCalledWith(mockCreateDto);
-      expect(repository.save).toHaveBeenCalledWith(mockPuckComponent);
-      expect(result).toEqual(mockPuckComponent);
+      expect(repository.findOneBy).toHaveBeenCalledWith({ slug });
+      expect(repository.save).toHaveBeenCalledWith(mockCreateDtoWithSlug);
+      expect(result).toEqual(createdComponent);
+    });
+
+    it('should update an existing puck component if slug exists', async () => {
+      // Arrange
+      const slug = 'existing-slug';
+      const mockCreateDtoWithSlug = { ...mockCreateDto, slug };
+      const existingComponent = { ...mockPuckComponent, slug, id: new ObjectId() };
+
+      jest.spyOn(repository, 'findOneBy').mockResolvedValue(existingComponent as any);
+      jest.spyOn(service, 'update').mockResolvedValue({ ...existingComponent, ...mockCreateDtoWithSlug } as any);
+
+      // Act
+      const result = await service.create(mockCreateDtoWithSlug);
+
+      // Assert
+      expect(repository.findOneBy).toHaveBeenCalledWith({ slug });
+      expect(service.update).toHaveBeenCalledWith(slug, mockCreateDtoWithSlug);
+      expect(result).toEqual({ ...existingComponent, ...mockCreateDtoWithSlug });
     });
   });
 
@@ -165,34 +187,34 @@ describe('PuckComponentsService', () => {
   });
 
   describe('findOne', () => {
-    it('should find and return a puck component by id', async () => {
+    it('should find and return a puck component by slug', async () => {
       // Arrange
-      const mockId = '507f1f77bcf86cd799439011';
+      const mockSlug = 'test-slug';
       jest.spyOn(repository, 'findOneBy').mockResolvedValue(mockPuckComponent as any);
 
       // Act
-      const result = await service.findOne(mockId);
+      const result = await service.findOne(mockSlug);
 
       // Assert
-      expect(repository.findOneBy).toHaveBeenCalledWith({ id: new ObjectId(mockId) });
+      expect(repository.findOneBy).toHaveBeenCalledWith({ slug: mockSlug });
       expect(result).toEqual(mockPuckComponent);
     });
 
     it('should throw NotFoundException if component not found', async () => {
       // Arrange
-      const mockId = '507f1f77bcf86cd799439011';
+      const mockSlug = 'non-existent-slug';
       jest.spyOn(repository, 'findOneBy').mockResolvedValue(null);
 
       // Act & Assert
-      await expect(service.findOne(mockId)).rejects.toThrow(NotFoundException);
-      expect(repository.findOneBy).toHaveBeenCalledWith({ id: new ObjectId(mockId) });
+      await expect(service.findOne(mockSlug)).rejects.toThrow(NotFoundException);
+      expect(repository.findOneBy).toHaveBeenCalledWith({ slug: mockSlug });
     });
   });
 
   describe('update', () => {
     it('should update and return a puck component', async () => {
       // Arrange
-      const mockId = '507f1f77bcf86cd799439011';
+      const mockSlug = 'test-slug';
       const updatedComponent = {
         ...mockPuckComponent,
         content: {
@@ -209,10 +231,10 @@ describe('PuckComponentsService', () => {
       jest.spyOn(repository, 'save').mockResolvedValue(updatedComponent as any);
 
       // Act
-      const result = await service.update(mockId, mockUpdateDto);
+      const result = await service.update(mockSlug, mockUpdateDto);
 
       // Assert
-      expect(service.findOne).toHaveBeenCalledWith(mockId);
+      expect(service.findOne).toHaveBeenCalledWith(mockSlug);
       expect(repository.save).toHaveBeenCalled();
       expect(result).toEqual(updatedComponent);
     });
@@ -221,15 +243,15 @@ describe('PuckComponentsService', () => {
   describe('remove', () => {
     it('should remove a puck component', async () => {
       // Arrange
-      const mockId = '507f1f77bcf86cd799439011';
+      const mockSlug = 'test-slug';
       jest.spyOn(service, 'findOne').mockResolvedValue(mockPuckComponent as any);
       jest.spyOn(repository, 'remove').mockResolvedValue(undefined);
 
       // Act
-      await service.remove(mockId);
+      await service.remove(mockSlug);
 
       // Assert
-      expect(service.findOne).toHaveBeenCalledWith(mockId);
+      expect(service.findOne).toHaveBeenCalledWith(mockSlug);
       expect(repository.remove).toHaveBeenCalledWith(mockPuckComponent);
     });
   });
