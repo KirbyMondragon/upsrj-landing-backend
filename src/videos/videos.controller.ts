@@ -11,6 +11,7 @@ import {
   Headers,
   HttpCode,
   Query,
+  Body,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
@@ -28,9 +29,9 @@ import {
 import { VideosService } from './videos.service';
 import { ParseObjectIdPipe } from '../common/pipes/parse-object-id.pipe';
 import { videoFileFilter } from './helpers/videoFileFilter.helper';
-import { UploadVideoResponseDto } from './dto/upload-video.response';
 import { Auth } from 'src/auth/decorators';
 import { Video } from './entities/video.entity';
+import { UploadFileDto } from 'src/files-module/dto/update-files-module.dto';
 
 @ApiTags('Videos')
 @Controller('videos')
@@ -42,23 +43,23 @@ export class VideosController {
   @Post('upload')
   @ApiOperation({ summary: 'Subir un video' })
   @ApiConsumes('multipart/form-data')
-  @ApiCreatedResponse({ type: UploadVideoResponseDto })
+  @ApiCreatedResponse({
+    description: 'Video subido y metadatos guardados correctamente.',
+    type: Video,
+  })
   @UseInterceptors(
     FileInterceptor('file', {
       storage: null, // Dejamos que el servicio maneje el buffer
       fileFilter: videoFileFilter, // Un filtro para videos
-      limits: { fileSize: 500_000_000 }, // 500 MB
+      limits: { fileSize: 100_000_000 }, // 100 MB
     }),
   )
   async upload(
     @UploadedFile() file: Express.Multer.File,
-  ): Promise<UploadVideoResponseDto> {
+  ): Promise<object> {
     if (!file) throw new BadRequestException('Asegúrate de enviar un video.');
-
     const video = await this.videosService.upload(file);
-    return {
-      _id: video.gridFsId.toString(),
-    };
+    return video;
   }
 
   @Get('stream/:id')

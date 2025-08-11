@@ -81,13 +81,14 @@ export class VideosService {
     // 3️⃣ Persistir metadatos en la base de datos
     const video = this.videoRepository.create({
       gridFsId,
-      filename: file.originalname,
+      filename:file.originalname,
       contentType: file.mimetype,
       duration: Math.round(Number(duration) || 0),
       width: width || 0,
       height: height || 0,
     });
-
+    console.log(video);
+    this.logger.verbose(`Metadatos del video guardados en la base de datos`);
     return this.videoRepository.save(video);
   }
 
@@ -96,8 +97,12 @@ export class VideosService {
    */
   async stream(id: ObjectId, rangeHeader: string | undefined) {
     // Busca el archivo directamente en GridFS para obtener su tamaño total
-    const file = await this.bucket.find({ _id: id }).next();
-    if (!file) throw new NotFoundException('Video no encontrado.');
+    var file = await this.bucket.find({ _id: id }).next();
+    if (!file) {
+       file = await this.bucket.find({ gridFsId: id }).next();
+    } else{
+      throw new NotFoundException('Video no encontrado.');
+    }
 
     const totalSize = file.length;
 
@@ -108,7 +113,7 @@ export class VideosService {
           'Content-Length': totalSize,
           'Content-Type': file.contentType,
         },
-        stream: this.bucket.openDownloadStream(id),
+        stream: this.bucket.openDownloadStream(file._id),
         statusCode: 200, // OK
       };
     }
@@ -132,19 +137,11 @@ export class VideosService {
     const chunkSize = end - start + 1;
 
     // Prepara el stream de GridFS con el rango especificado
-    const stream = this.bucket.openDownloadStream(id, { start, end });
+    const stream = this.bucket.openDownloadStream(file._id, { start, end });
 
     stream.on('error', (err) => {
       this.logger.error(`Error al leer el stream de GridFS: ${err.message}`);
       throw new InternalServerErrorException('Error al procesar el stream del video.');
-    });
-
-    stream.on('data', (chunk) => {
-      this.logger.verbose(`Enviando chunk de tamaño: ${chunk.length}`);
-    });
-
-    stream.on('end', () => {
-      this.logger.verbose('Stream de GridFS finalizado correctamente.');
     });
 
     return {
