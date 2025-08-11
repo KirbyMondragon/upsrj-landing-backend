@@ -22,7 +22,10 @@ export class Video {
 
     @Column({ type: 'int' })
     height: number;
-    
+
+    @Column({ unique: true })
+    hash: string; // Nuevo campo para almacenar el hash único del video
+
     @CreateDateColumn()
     createdAt: Date;
 }

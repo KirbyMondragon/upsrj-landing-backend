@@ -12,6 +12,7 @@ import { Repository } from 'typeorm';
 import { Video } from './entities/video.entity';
 import * as ffmpeg from 'fluent-ffmpeg';
 import { Readable } from 'stream';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class VideosService {
@@ -25,17 +26,26 @@ export class VideosService {
   /**
    * Extrae metadatos del video (duración, dimensiones) usando ffprobe.
    */
-  private async getVideoMetadata(buffer: Buffer): Promise<ffmpeg.FfprobeData> {
+  private async getVideoMetadata(buffer: Buffer): Promise<{ metadata: ffmpeg.FfprobeData; hash: string }> {
     const fs = await import('fs');
     const os = await import('os');
     const path = await import('path');
     const tmpDir = os.tmpdir();
     const tmpFilePath = path.join(tmpDir, `video-meta-${Date.now()}.tmp`);
 
+    // Calcular el hash del archivo
+    const hash = crypto.createHash('sha256').update(buffer).digest('hex');
+
+    // Verificar si el hash ya existe en la base de datos
+    const existingVideo = await this.videoRepository.findOne({ where: { hash } });
+    if (existingVideo) {
+        throw new BadRequestException('El video ya existe en el sistema.');
+    }
+
     // Escribe el buffer a un archivo temporal
     await fs.promises.writeFile(tmpFilePath, buffer);
 
-    return new Promise((resolve, reject) => {
+    const metadata = await new Promise<ffmpeg.FfprobeData>((resolve, reject) => {
       ffmpeg.ffprobe(tmpFilePath, (err, metadata) => {
         // Elimina el archivo temporal después de obtener los metadatos
         fs.promises.unlink(tmpFilePath).catch(() => {});
@@ -43,6 +53,8 @@ export class VideosService {
         resolve(metadata);
       });
     });
+
+    return { metadata, hash };
   }
 
   /**
@@ -52,13 +64,13 @@ export class VideosService {
     if (!file?.buffer) throw new BadRequestException('Archivo vacío.');
 
     // 1️⃣ Extraer metadatos del video
-    const metadata = await this.getVideoMetadata(file.buffer);
+    const { metadata, hash } = await this.getVideoMetadata(file.buffer);
     const videoStreamMeta = metadata.streams.find((s) => s.codec_type === 'video');
 
     if (!videoStreamMeta) {
       throw new BadRequestException('El archivo no parece ser un video válido.');
     }
-    
+
     const { duration, width, height } = videoStreamMeta;
 
     // 2️⃣ Subir a GridFS
@@ -81,13 +93,13 @@ export class VideosService {
     // 3️⃣ Persistir metadatos en la base de datos
     const video = this.videoRepository.create({
       gridFsId,
-      filename:file.originalname,
+      filename: file.originalname,
       contentType: file.mimetype,
       duration: Math.round(Number(duration) || 0),
       width: width || 0,
       height: height || 0,
+      hash, // Agregar el hash calculado al guardar el video
     });
-    console.log(video);
     this.logger.verbose(`Metadatos del video guardados en la base de datos`);
     return this.videoRepository.save(video);
   }
