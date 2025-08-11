@@ -97,10 +97,8 @@ export class VideosService {
    */
   async stream(id: ObjectId, rangeHeader: string | undefined) {
     // Busca el archivo directamente en GridFS para obtener su tamaño total
-    var file = await this.bucket.find({ _id: id }).next();
+    const file = await this.bucket.find({ _id: id }).next();
     if (!file) {
-       file = await this.bucket.find({ gridFsId: id }).next();
-    } else{
       throw new NotFoundException('Video no encontrado.');
     }
 
@@ -177,11 +175,21 @@ export class VideosService {
     return { message: 'Video eliminado correctamente' };
   }
 
-  async getPaginatedVideos(skip: number, limit: number): Promise<[Video[], number]> {
+  async getPaginatedVideos(skip: number, limit: number) {
     const [data, total] = await this.videoRepository.findAndCount({
       skip,
       take: limit,
     });
-    return [data, total];
+    // Desestructurar y modificar los datos si es necesario
+    const modifiedData = data.map(video => ({
+      gridFsId: video.gridFsId.toString(), // Convertir ObjectId a string
+      filename: video.filename,
+      contentType: video.contentType,
+      duration: video.duration,
+      width: video.width,
+      height: video.height,
+    }));
+
+    return [modifiedData, total];
   }
 }

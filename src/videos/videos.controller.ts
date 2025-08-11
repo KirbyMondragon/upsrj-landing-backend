@@ -57,21 +57,24 @@ export class VideosController {
   async upload(
     @UploadedFile() file: Express.Multer.File,
   ): Promise<object> {
-    if (!file) throw new BadRequestException('Asegúrate de enviar un video.');
+    if (!file) throw new BadRequestException('Ensure you send a video.');
     const video = await this.videosService.upload(file);
-    return video;
+    return {
+      message: 'Video uploaded successfully, here is its search ID:',
+      gridFsId: video.gridFsId,
+    };
   }
 
   @Get('stream/:id')
   @Auth([{ module: 'Images', permission: 'canDelete' }])
-  @ApiOperation({ summary: 'Reproducir/descargar un video por ID' })
-  @ApiParam({ name: 'id', description: 'ObjectId del video en GridFS' })
+  @ApiOperation({ summary: 'Play/download a video by ID' })
+  @ApiParam({ name: 'id', description: 'ObjectId of the video in GridFS' })
   @ApiOkResponse({
-    description: 'Devuelve el stream del video (parcial o completo).',
+    description: 'Returns the video stream (parcial o completo).',
   })
   async streamVideo(
     @Param('id', ParseObjectIdPipe) id: ObjectId,
-    @Headers('range') range: string, // <-- Capturamos el encabezado 'Range'
+    @Headers('range') range: string, // <-- Captures the 'Range' header
     @Res() res: Response,
   ) {
     const { headers, stream, statusCode } = await this.videosService.stream(
@@ -79,19 +82,19 @@ export class VideosController {
       range,
     );
 
-    // Establecemos el código de estado (200 o 206) y los encabezados
+    // Set the status code (200 or 206) and headers
     res.status(statusCode);
     res.set(headers);
 
-    // Enviamos el stream al cliente
+    // Send the stream to the client
     stream.pipe(res);
   }
 
   @Auth([{ module: 'Images', permission: 'canDelete' }])
   @Delete(':id')
   @HttpCode(200)
-  @ApiOperation({ summary: 'Eliminar un video por ID' })
-  @ApiNoContentResponse({ description: 'Video eliminado correctamente' })
+  @ApiOperation({ summary: 'Delete a video by ID' })
+  @ApiNoContentResponse({ description: 'Video deleted successfully' })
   async deleteVideo(
     @Param('id', ParseObjectIdPipe) id: ObjectId,
   ): Promise<{ message: string }> {
@@ -100,12 +103,12 @@ export class VideosController {
 
   @Get('stream')
   @Auth([{ module: 'Images', permission: 'canRead' }])
-  @ApiOperation({ summary: 'Obtener videos paginados' })
-  @ApiOkResponse({ description: 'Devuelve una lista paginada de videos.' })
+  @ApiOperation({ summary: 'Get paginated videos' })
+  @ApiOkResponse({ description: 'Returns a paginated list of videos.' })
   async getPaginatedVideos(
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
-  ): Promise<{ data: Video[]; total: number; page: number; limit: number }> {
+  ) {
     const skip = (page - 1) * limit;
     const [data, total] = await this.videosService.getPaginatedVideos(skip, limit);
 
