@@ -11,11 +11,11 @@ import { GridFSBucket, ObjectId } from 'mongodb';
 import { Repository } from 'typeorm';
 import { Video } from './entities/video.entity';
 import * as ffmpeg from 'fluent-ffmpeg';
-import * as ffmpegInstaller from '@ffmpeg-installer/ffmpeg'; //TODO: instalar ffmpeg en docker
-import * as ffprobeInstaller from '@ffprobe-installer/ffprobe';
 import { Readable } from 'stream';
 import * as crypto from 'crypto';
 
+const ffmpegStatic = require('ffmpeg-static');
+const ffprobeStatic = require('ffprobe-static');
 @Injectable()
 export class VideosService {
   private readonly logger = new Logger(VideosService.name);
@@ -25,11 +25,11 @@ export class VideosService {
     @InjectRepository(Video) private readonly videoRepository: Repository<Video>,
   ) {
       //Indicar a fluent-ffmpeg la ruta de ambos binarios
-      ffmpeg.setFfmpegPath(ffmpegInstaller.path);
-      ffmpeg.setFfprobePath(ffprobeInstaller.path);
+      ffmpeg.setFfmpegPath(ffmpegStatic);
+      ffmpeg.setFfprobePath(ffprobeStatic.path);
 
-      this.logger.log(`Ruta de FFmpeg establecida: ${ffmpegInstaller.path}`);
-      this.logger.log(`Ruta de FFprobe establecida: ${ffprobeInstaller.path}`);
+      this.logger.log(`Ruta de FFmpeg (static) establecida: ${ffmpegStatic}`);
+      this.logger.log(`Ruta de FFprobe (static) establecida: ${ffprobeStatic.path}`);
   }
 
   /**
