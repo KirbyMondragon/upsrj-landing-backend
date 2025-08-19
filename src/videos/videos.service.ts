@@ -11,6 +11,8 @@ import { GridFSBucket, ObjectId } from 'mongodb';
 import { Repository } from 'typeorm';
 import { Video } from './entities/video.entity';
 import * as ffmpeg from 'fluent-ffmpeg';
+import * as ffmpegInstaller from '@ffmpeg-installer/ffmpeg'; //TODO: instalar ffmpeg en docker
+import * as ffprobeInstaller from '@ffprobe-installer/ffprobe';
 import { Readable } from 'stream';
 import * as crypto from 'crypto';
 
@@ -21,7 +23,14 @@ export class VideosService {
   constructor(
     @Inject('GRIDFS_BUCKET_VIDEOS') private readonly bucket: GridFSBucket,
     @InjectRepository(Video) private readonly videoRepository: Repository<Video>,
-  ) {}
+  ) {
+      //Indicar a fluent-ffmpeg la ruta de ambos binarios
+      ffmpeg.setFfmpegPath(ffmpegInstaller.path);
+      ffmpeg.setFfprobePath(ffprobeInstaller.path);
+
+      this.logger.log(`Ruta de FFmpeg establecida: ${ffmpegInstaller.path}`);
+      this.logger.log(`Ruta de FFprobe establecida: ${ffprobeInstaller.path}`);
+  }
 
   /**
    * Extrae metadatos del video (duración, dimensiones) usando ffprobe.
@@ -47,9 +56,10 @@ export class VideosService {
 
     const metadata = await new Promise<ffmpeg.FfprobeData>((resolve, reject) => {
       ffmpeg.ffprobe(tmpFilePath, (err, metadata) => {
-        // Elimina el archivo temporal después de obtener los metadatos
-        fs.promises.unlink(tmpFilePath).catch(() => {});
-        if (err) return reject(new BadRequestException('No se pudieron procesar los metadatos del video.'));
+        fs.promises.unlink(tmpFilePath).catch(e => this.logger.warn(`No se pudo eliminar el archivo temporal: ${tmpFilePath}`, e));
+        if (err) {
+          this.logger.error(`ffprobe falló al procesar el archivo.`, err.stack); return reject(new BadRequestException('No se pudieron procesar los metadatos del video.'));
+        }
         resolve(metadata);
       });
     });
