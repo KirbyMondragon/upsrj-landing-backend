@@ -23,18 +23,17 @@ export class TemplatesModuleService {
    * @param dto The data transfer object containing module details
    * @returns The newly created module
    */
-  async create(dto: CreateTemplatesModuleDto) {
-    // const slug = this.slugify(dto.slug || dto.root?.props?.title || '');
-
-    // Eliminar _id si viene en el DTO para evitar conflictos
+  async create(dto: CreateTemplatesModuleDto): Promise<TemplatesComponent> {
     const { _id, ...restDto } = dto as any;
 
-    const exists = await this.templatesRepository.findOneBy({ slug: dto.slug });
-    if (exists) {
-      return this.update(exists.slug, restDto);
-    }
+    const newTemplate = this.templatesRepository.create({
+      ...restDto,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
 
-    return this.templatesRepository.save({ ...restDto, slug: dto.slug });
+    const saved = await this.templatesRepository.save(newTemplate);
+    return saved as TemplatesComponent;
   }
 
   /**
@@ -56,11 +55,18 @@ export class TemplatesModuleService {
    * @param id The unique identifier of the component
    * @returns The found component or throws NotFoundException
    */
-  async findOne(slug: string) {
-    const component = await this.templatesRepository.findOneBy({ slug: slug });
-    console.log('component found:', component, slug);
+  async findOne(id: string) {
+    let objectId: ObjectId;
+    try {
+      objectId = new ObjectId(id);
+    } catch {
+      throw new BadRequestException('Invalid ID format');
+    }
+    const component = await this.templatesRepository.findOneBy({
+      _id: objectId,
+    });
     if (!component) {
-      throw new NotFoundException(`Component with id "${slug}" not found`);
+      throw new NotFoundException(`Component with id "${id}" not found`);
     }
     return component;
   }
@@ -71,8 +77,8 @@ export class TemplatesModuleService {
    * @param dto The data transfer object with updated fields
    * @returns The updated component
    */
-  async update(slug: string, dto: UpdateTemplatesModuleDto) {
-    const existing = await this.findOne(slug); // lanza error si no existe
+  async update(id: string, dto: UpdateTemplatesModuleDto) {
+    const existing = await this.findOne(id); // lanza error si no existe
     const updated = Object.assign(existing, dto);
     return await this.templatesRepository.save(updated);
   }
@@ -81,19 +87,8 @@ export class TemplatesModuleService {
    * Removes a Templates Module from the database
    * @param slug The unique identifier of the module to delete
    */
-  async remove(slug: string) {
-    const component = await this.findOne(slug); // lanza error si no existe
+  async remove(id: string) {
+    const component = await this.findOne(id); // lanza error si no existe
     await this.templatesRepository.remove(component);
-  }
-
-  private slugify(text: string): string {
-    return text
-      .toLowerCase()
-      .trim()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '') // quita acentos
-      .replace(/[^\w\s-]/g, '') // quita símbolos
-      .replace(/\s+/g, '-') // reemplaza espacios por guiones
-      .replace(/--+/g, '-'); // evita múltiples guiones seguidos
   }
 }

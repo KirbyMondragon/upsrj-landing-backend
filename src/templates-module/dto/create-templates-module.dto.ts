@@ -1,5 +1,11 @@
-
-import { IsString, IsObject, IsOptional, ValidateNested, IsArray, IsDefined } from 'class-validator';
+import {
+  IsString,
+  IsObject,
+  IsOptional,
+  ValidateNested,
+  IsArray,
+  IsDefined,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 /**
@@ -7,23 +13,22 @@ import { Type } from 'class-transformer';
  * Contains type, props, and optional readOnly settings
  */
 class PuckContent {
-    
-    @IsString()
-    type: string;
+  @IsString()
+  type: string;
 
-    @IsObject()
-    props: {
-        id: string;
-        title: string;
-        description: string;
-    };
+  @IsObject()
+  props: {
+    id: string;
+    title: string;
+    description: string;
+  };
 
-    @IsOptional()
-    @IsObject()
-    readOnly?: {
-        title?: boolean;
-        description?: boolean;
-    };
+  @IsOptional()
+  @IsObject()
+  readOnly?: {
+    title?: boolean;
+    description?: boolean;
+  };
 }
 
 /**
@@ -31,16 +36,16 @@ class PuckContent {
  * Contains props and optional readOnly settings
  */
 class PuckRoot {
-    @IsObject()
-    props: {
-        title: string;
-    };
+  @IsObject()
+  props: {
+    title: string;
+  };
 
-    @IsOptional()
-    @IsObject()
-    readOnly?: {
-        title?: boolean;
-    };
+  @IsOptional()
+  @IsObject()
+  readOnly?: {
+    title?: boolean;
+  };
 }
 
 /**
@@ -48,20 +53,20 @@ class PuckRoot {
  * Zone items are nested components within the main component
  */
 class PuckZoneItem {
-    @IsString()
-    type: string;
+  @IsString()
+  type: string;
 
-    @IsObject()
-    props: {
-        id: string;
-        title: string;
-    };
+  @IsObject()
+  props: {
+    id: string;
+    title: string;
+  };
 
-    @IsOptional()
-    @IsObject()
-    readOnly?: {
-        title?: boolean;
-    };
+  @IsOptional()
+  @IsObject()
+  readOnly?: {
+    title?: boolean;
+  };
 }
 
 /**
@@ -69,24 +74,20 @@ class PuckZoneItem {
  * Validates the structure of the component data before processing
  */
 export class CreateTemplatesModuleDto {
-    @IsOptional()   
-    @IsString()
-    slug?: string;
+  @ValidateNested()
+  @Type(() => PuckContent)
+  content: PuckContent;
 
-    @ValidateNested()
-    @Type(() => PuckContent)
-    content: PuckContent;
+  @IsObject()
+  @ValidateNested()
+  @Type(() => PuckRoot)
+  root: PuckRoot;
 
-    @IsObject()
-    @ValidateNested()
-    @Type(() => PuckRoot)
-    root: PuckRoot;
+  @IsDefined()
+  @IsObject()
+  zones: Record<string, PuckZoneItem[]>;
 
-    @IsDefined()
-    @IsObject()
-    zones: Record<string, PuckZoneItem[]>;
-
-    // Permitir que llegue _id pero ignorarlo en la lógica
-    @IsOptional()
-    _id?: string;
+  // Permitir que llegue _id pero ignorarlo en la lógica
+  @IsOptional()
+  _id?: string;
 }

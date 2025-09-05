@@ -56,17 +56,16 @@ export class TemplatesModuleController {
     return this.templatesService.findAll(paginationDto);
   }
 
-  @ApiOperation({ summary: 'Obtener un template por su slug' })
+  @ApiOperation({ summary: 'Obtener un template por su ID' })
   @ApiResponse({
     status: 200,
     description: 'Template encontrado',
     type: TemplatesComponent,
   })
   @ApiResponse({ status: 404, description: 'Template no encontrado' })
-  @Get(':slug')
-  async findOne(@Param('slug') slug: string): Promise<TemplatesComponent> {
-    const slugString = decodeURIComponent(slug);
-    return this.templatesService.findOne(slugString);
+  @Get(':id')
+  async findOne(@Param('id') id: string): Promise<TemplatesComponent> {
+    return this.templatesService.findOne(id);
   }
 
   @ApiOperation({ summary: 'Actualizar un template existente' })
@@ -78,25 +77,25 @@ export class TemplatesModuleController {
   @ApiResponse({ status: 400, description: 'Datos de actualización inválidos' })
   @ApiResponse({ status: 404, description: 'Template no encontrado' })
   @Auth([{ module: 'Templates', permission: 'canUpdate' }])
-  @Patch(':slug')
+  @Patch(':id')
   async update(
-    @Param('slug') slug: string,
+    @Param('id') id: string,
     @Body() updateDto: UpdateTemplatesModuleDto,
   ): Promise<TemplatesComponent> {
-    const slugString = decodeURIComponent(slug);
-    return this.templatesService.update(slugString, updateDto);
+    // const slugString = decodeURIComponent(slug);
+    return this.templatesService.update(id, updateDto);
   }
 
-  @ApiOperation({ summary: 'Eliminar un template por su slug' })
+  @ApiOperation({ summary: 'Eliminar un template por su ID' })
   @ApiResponse({
     status: 200,
     description: 'Template eliminado exitosamente',
   })
   @ApiResponse({ status: 404, description: 'Template no encontrado' })
   @Auth([{ module: 'Templates', permission: 'canDelete' }])
-  @Delete(':slug')
-  async remove(@Param('slug') slug: string): Promise<void> {
-    const slugString = decodeURIComponent(slug);
-    return this.templatesService.remove(slugString);
+  @Delete(':id')
+  async remove(@Param('id') id: string): Promise<void> {
+    // const slugString = decodeURIComponent(slug);
+    return this.templatesService.remove(id);
   }
 }
