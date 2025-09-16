@@ -74,6 +74,10 @@ class PuckZoneItem {
  * Validates the structure of the component data before processing
  */
 export class CreateTemplatesModuleDto {
+  @IsOptional()
+  @IsString()
+  slug?: string;
+
   @ValidateNested()
   @Type(() => PuckContent)
   content: PuckContent;

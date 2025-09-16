@@ -23,7 +23,7 @@ import { TemplatesComponent } from './entities/templates-module.entity';
 
 @ApiTags('Templates')
 @ApiBearerAuth('JWT-auth')
-@Controller('templates')
+@Controller('Templates')
 export class TemplatesModuleController {
   constructor(private readonly templatesService: TemplatesModuleService) {}
 

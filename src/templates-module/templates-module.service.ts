@@ -26,14 +26,26 @@ export class TemplatesModuleService {
   async create(dto: CreateTemplatesModuleDto): Promise<TemplatesComponent> {
     const { _id, ...restDto } = dto as any;
 
-    const newTemplate = this.templatesRepository.create({
-      ...restDto,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+    // If _id exists, try to update instead of creating new
+    if (_id) {
+      const exists = await this.templatesRepository.findOneBy({
+        _id: new ObjectId(_id),
+      });
 
-    const saved = await this.templatesRepository.save(newTemplate);
-    return saved as TemplatesComponent;
+      if (exists) {
+        // Update the existing record
+        await this.templatesRepository.update(
+          { _id: new ObjectId(_id) },
+          { ...restDto },
+        );
+
+        return this.templatesRepository.findOneBy({ _id: new ObjectId(_id) });
+      }
+    }
+
+    return this.templatesRepository.save({
+      ...restDto,
+    });
   }
 
   /**
@@ -85,7 +97,7 @@ export class TemplatesModuleService {
 
   /**
    * Removes a Templates Module from the database
-   * @param slug The unique identifier of the module to delete
+   * @param id The unique identifier of the module to delete
    */
   async remove(id: string) {
     const component = await this.findOne(id); // lanza error si no existe

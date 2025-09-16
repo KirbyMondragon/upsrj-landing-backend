@@ -14,6 +14,13 @@ export class TemplatesComponent {
   _id: ObjectId;
 
   /**
+   * Name of the component
+   * Used for identification and categorization of components
+   */
+  @Column()
+  slug: string;
+
+  /**
    * Main content of the Puck component
    * Contains type, props and optional readOnly settings
    */
