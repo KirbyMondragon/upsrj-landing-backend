@@ -57,7 +57,7 @@ describe('TemplatesModuleService', () => {
       const dto: any = { slug: 'hero', content: { type: 'A', props: { id: '1', title: 't', description: 'd' } }, root: { props: { title: 'root' } }, zones: {} };
       const res = await service.create(dto);
       expect(service.update).toHaveBeenCalled();
-      expect(res.content.changed).toBe(true);
+      expect(res.content).toBe(true);
     });
   });
 
